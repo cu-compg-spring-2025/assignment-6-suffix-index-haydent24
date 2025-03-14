@@ -1,12 +1,8 @@
 import argparse
 import utils
-import suffix_tree
-
-SUB = 0
-CHILDREN = 1
 
 def get_args():
-    parser = argparse.ArgumentParser(description='Suffix Tree')
+    parser = argparse.ArgumentParser(description='Suffix Array')
 
     parser.add_argument('--reference',
                         help='Reference sequence file',
@@ -24,35 +20,55 @@ def get_args():
     return parser.parse_args()
 
 def build_suffix_array(T):
-    tree = suffix_tree.build_suffix_tree(T)
-    # Your code here
+    suffixes = [(T[i:], i) for i in range(len(T))]
+    sorted_suffixes = sorted(suffixes)
+    suffix_array = [suffix[1] for suffix in sorted_suffixes]
+    return suffix_array
 
-    #defs
-    stack = [0]
-    while stack:
-        node_idx = stack.pop()
-        for child in tree[node_idx][CHILDREN]:
-            stack.append(child)
-
-
-
-    return None
-
+def longest_common_prefix(s1, s2):
+    lcp_length = 0
+    for c1, c2 in zip(s1, s2):
+        if c1 == c2:
+            lcp_length += 1
+        else:
+            break
+    return lcp_length
 
 def search_array(T, suffix_array, q):
-
-    # Your code here
-
-    # binary search
-    lo= -1
+    lo = 0
     hi = len(suffix_array)
-    while (hi - lo > 1):
-        mid = int((lo + hi) / 2)
-        if suffix_array[mid] < q:
-            lo = mid
+    matches = []
+    prefix_lengths = []
+    max_lcp_length = 0
+
+    while lo < hi:
+        mid = (lo + hi) // 2
+        suffix = T[suffix_array[mid]:]
+        lcp_length = longest_common_prefix(suffix, q)
+        max_lcp_length = max(max_lcp_length, lcp_length)
+        if suffix.startswith(q):
+            # Find the range of matches
+            left = mid
+            while left >= 0 and T[suffix_array[left]:].startswith(q):
+                matches.append(suffix_array[left])
+                prefix_lengths.append(len(q))
+                left -= 1
+            right = mid + 1
+            while right < len(suffix_array) and T[suffix_array[right]:].startswith(q):
+                matches.append(suffix_array[right])
+                prefix_lengths.append(len(q))
+                right += 1
+            break
+        elif suffix < q:
+            lo = mid + 1
         else:
             hi = mid
-    return hi
+
+    matches.sort()
+    if matches:
+        return len(matches), matches, prefix_lengths
+    else:
+        return 0, [], [max_lcp_length]
 
 def main():
     args = get_args()
@@ -69,8 +85,12 @@ def main():
 
     if args.query:
         for query in args.query:
-            match_len = search_array(array, query)
-            print(f'{query} : {match_len}')
+            print(f"Searching for query: {query}")
+            match_count, match_indices, prefix_lengths = search_array(T, array, query)
+            if match_count > 0:
+                print(f'{query} found {match_count} times at indices {match_indices} with prefix lengths {prefix_lengths}')
+            else:
+                print(f'{query} not found, longest prefix overlap length: {prefix_lengths[0]}')
 
 if __name__ == '__main__':
     main()

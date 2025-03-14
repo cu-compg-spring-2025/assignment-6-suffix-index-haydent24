@@ -22,12 +22,11 @@ def get_args():
 
     return parser.parse_args()
 
-
 def add_suffix(nodes, suf):
     n = 0
     i = 0
     while i < len(suf):
-        b = suf[i] 
+        b = suf[i]
         children = nodes[n][CHILDREN]
         if b not in children:
             n2 = len(nodes)
@@ -43,7 +42,7 @@ def add_suffix(nodes, suf):
             j += 1
 
         if j < len(sub2):
-            n3 = n2 
+            n3 = n2
             n2 = len(nodes)
             nodes.append([sub2[:j], {sub2[j]: n3}])
             nodes[n3][SUB] = sub2[j:]
@@ -55,16 +54,49 @@ def add_suffix(nodes, suf):
 def build_suffix_tree(text):
     text += "$"
 
-    nodes = [ ['', {}] ]
+    nodes = [['', {}]]
 
     for i in range(len(text)):
         add_suffix(nodes, text[i:])
-    
+        if i % 1000 == 0:  # Print progress every 1000 iterations
+            print(f"Added suffix starting at index {i}")
+
     return nodes
 
-def search_tree(suffix_tree, P):
-    # Your code here
-    return None
+def search_tree(suffix_tree, P, text_length):
+    n = 0
+    i = 0
+    while i < len(P):
+        b = P[i]
+        children = suffix_tree[n][CHILDREN]
+        if b not in children:
+            return 0, []
+        n2 = children[b]
+        sub2 = suffix_tree[n2][SUB]
+        j = 0
+        while j < len(sub2) and i + j < len(P) and P[i + j] == sub2[j]:
+            j += 1
+        if j < len(sub2):
+            return 0, []
+        i += j
+        n = n2
+
+    # Now we need to collect all suffixes in the subtree
+    match_indexes = []
+    
+    def collect_suffixes(node, path_length):
+        if not suffix_tree[node][CHILDREN]:  # Leaf node
+            # Calculate the original position
+            suffix_start = text_length - path_length
+            match_indexes.append(suffix_start)
+        else:
+            for child_char, child_node in suffix_tree[node][CHILDREN].items():
+                collect_suffixes(child_node, path_length + len(suffix_tree[child_node][SUB]))
+    
+    # Start collecting from the node where we found the pattern
+    collect_suffixes(n, len(P))
+    
+    return len(match_indexes), match_indexes
 
 def main():
     args = get_args()
@@ -77,12 +109,15 @@ def main():
         reference = utils.read_fasta(args.reference)
         T = reference[0][1]
 
+    print(f"Building suffix tree for: {T[:50]}... (truncated)")
     tree = build_suffix_tree(T)
+    print(f"Suffix tree built with {len(tree)} nodes")
         
     if args.query:
         for query in args.query:
-            match_len = search_tree(tree, query)
-            print(f'{query} : {match_len}')
+            print(f"Searching for query: {query}")
+            match_len, match_indexes = search_tree(tree, query, len(T))
+            print(f'{query} : {match_len} matches at indexes {match_indexes}')
 
 if __name__ == '__main__':
     main()

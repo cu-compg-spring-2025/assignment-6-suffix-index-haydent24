@@ -20,12 +20,27 @@ def get_args():
     return parser.parse_args()
 
 def build_suffix_trie(s):
-    # YOUR CODE HERE
-    return None
+    root = {}
+    for i in range(len(s)):
+        current_node = root
+        for char in s[i:]:
+            if char not in current_node:
+                current_node[char] = {}
+            current_node = current_node[char]
+        current_node['$'] = True  # Mark the end of a suffix
+        if i % 1000 == 0:  # Print progress every 1000 iterations
+            print(f"Inserted suffix starting at index {i}")
+    return root
 
 def search_trie(trie, pattern):
-    # YOUR CODE HERE
-    return None
+    current_node = trie
+    match_length = 0
+    for char in pattern:
+        if char not in current_node:
+            break
+        current_node = current_node[char]
+        match_length += 1
+    return match_length
 
 def main():
     args = get_args()
@@ -38,7 +53,9 @@ def main():
         reference = utils.read_fasta(args.reference)
         T = reference[0][1]
 
+    print(f"Building suffix trie for sequence of length {len(T)}")
     trie = build_suffix_trie(T)
+    print("Suffix trie built successfully")
 
     if args.query:
         for query in args.query:
